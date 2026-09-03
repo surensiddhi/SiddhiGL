@@ -1,0 +1,26 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="description" content="SiddhiGL — Simple Accounting System" />
+    <meta name="theme-color" content="#D97706" />
+    <link rel="icon" type="image/png" href="/icons/icon-192.png" />
+    <link rel="apple-touch-icon" href="/icons/icon-192.png" />
+    <link rel="manifest" href="/manifest.webmanifest" />
+    <title>SiddhiGL</title>
+  </head>
+  <body>
+    <div id="app">
+      <!-- Login screen -->
+      <div id="view-login"></div>
+
+      <!-- App shell (hidden until logged in) -->
+      <div id="app-shell" hidden>
+        <nav id="sidebar"></nav>
+        <main id="content"></main>
+      </div>
+    </div>
+    <script type="module" src="/src/main.ts"></script>
+  </body>
+</html>
