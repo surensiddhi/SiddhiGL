@@ -22,8 +22,16 @@ export const approveVoucher = (headId: number) =>
 export const unapproveVoucher = (headId: number) =>
   rpc('unapprove_voucher', { ...ctx(), p_head_id: headId });
 
-/** post_many has no p_tenant — uses p_posted_by only */
+/** post_many(p_ids bigint[], p_tenant text, p_posted_by text DEFAULT NULL) */
 export const postMany = (ids: number[]) => {
-  const { p_caller } = ctx();
-  return rpc<number>('post_many', { p_ids: ids, p_posted_by: p_caller });
+  const { p_tenant, p_caller } = ctx();
+  return rpc<number>('post_many', { p_ids: ids, p_tenant, p_posted_by: p_caller });
 };
+
+/** List posted vouchers via dedicated lk_posted_list */
+export const listPosted = () =>
+  rpc<VoucherRow[]>('lk_posted_list', { ...ctx() });
+
+/** Fetch a single posted voucher with lines */
+export const getPostedVoucher = (headId: number) =>
+  rpc<any>('get_posted_voucher', { ...ctx(), p_head_id: headId });

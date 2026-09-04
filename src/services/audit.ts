@@ -3,20 +3,31 @@
 import { rpc } from '../lib/rpc';
 import { ctx } from '../lib/session';
 
+export interface AuditLogRow {
+  id:         number;
+  changed_at: string;
+  changed_by: string;
+  table_name: string;
+  action:     string;
+  row_key:    string;
+  tenant_id:  string;
+  changes:    Record<string, unknown> | null;
+}
+
 export const auditLog = (p: {
-  table_name?: string;
-  action?:     string;
-  from_date?:  string;
-  to_date?:    string;
-  user_name?:  string;
-  limit?:      number;
+  from?:   string;
+  to?:     string;
+  user?:   string;
+  table?:  string;
+  action?: string;
+  limit?:  number;
 }) =>
-  rpc('audit_log', {
+  rpc<AuditLogRow[]>('get_audit_log', {
     ...ctx(),
-    p_table_name: p.table_name ?? null,
-    p_action:     p.action     ?? null,
-    p_from_date:  p.from_date  ?? null,
-    p_to_date:    p.to_date    ?? null,
-    p_user_name:  p.user_name  ?? null,
-    p_limit:      p.limit      ?? 200
+    p_from:   p.from   ?? null,
+    p_to:     p.to     ?? null,
+    p_user:   p.user   ?? null,
+    p_table:  p.table  ?? null,
+    p_action: p.action ?? null,
+    p_limit:  p.limit  ?? 500,
   });
