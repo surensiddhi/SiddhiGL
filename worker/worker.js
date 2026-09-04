@@ -71,6 +71,7 @@ export default {
  */
 function pickOrigin(request, env) {
   const prod    = env.ALLOW_ORIGIN || '*';
+  const reqOrigin = request.headers.get('Origin') || '';
   const allowed = [
     prod,
     'http://localhost:5173',
@@ -78,8 +79,11 @@ function pickOrigin(request, env) {
     'http://127.0.0.1:5173',
     'http://127.0.0.1:4173'
   ];
-  const reqOrigin = request.headers.get('Origin');
-  return allowed.includes(reqOrigin) ? reqOrigin : prod;
+  if (allowed.includes(reqOrigin)) return reqOrigin;
+  if (reqOrigin.endsWith('.siddhigl-web.pages.dev') ||
+      reqOrigin === 'https://siddhigl-web.pages.dev' ||
+      reqOrigin === 'https://gl.siddhi.cc') return reqOrigin;
+  return prod;
 }
 
 function cors(origin) {
