@@ -22,10 +22,15 @@ export const saveCompanyConfig = (c: CompanyConfig) =>
     p_age_b3:             c.age_b3 ?? null,
     p_age_b4:             c.age_b4 ?? null,
     p_lock_date:          c.lock_date ?? null,
+    p_vat_pct:                   c.vat_pct ?? null,
+    p_vat_payable_account_no:    c.vat_payable_account_no ?? null,
+    p_vat_receivable_account_no: c.vat_receivable_account_no ?? null,
+    p_default_sales_due_days:    c.default_sales_due_days ?? null,
+    p_default_purchase_due_days: c.default_purchase_due_days ?? null,
   });
 
 export const tradingSetupStatus = () =>
-  rpc('trading_setup_status', {});
+  rpc('trading_setup_status', { ...ctx() });
 
 export const setupTradingAccounts = () =>
-  rpc('setup_trading_accounts', {});
+  rpc('setup_trading_accounts', { ...ctx() });
