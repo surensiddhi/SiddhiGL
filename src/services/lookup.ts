@@ -18,6 +18,7 @@ const LOOKUP_MAP: Record<string, LookupConfig> = {
   cost_centres:       { fn: 'lk_cost_centres',        clientCache: true  },
   tran_types:         { fn: 'lk_tran_types',          clientCache: true  },
   parties_by_account: { fn: 'lk_parties_by_account',  clientCache: false, hasRuntime: true },
+  items:              { fn: 'lk_items',                clientCache: false },
 };
 
 /** Client-side cache for stable, small lookups (clientCache: true). */

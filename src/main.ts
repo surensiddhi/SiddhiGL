@@ -16,6 +16,8 @@ const VIEW_INIT: Record<string, () => Promise<{ init: (el: HTMLElement) => void 
   'voucher-list':     () => import('./views/voucher-list'),
   'voucher-form':     () => import('./views/voucher-form'),
   'posted-list':      () => import('./views/posted-list'),
+  'payment-voucher':  () => import('./views/pv-rv').then(m => ({ init: m.initPV })),
+  'receipt-voucher':  () => import('./views/pv-rv').then(m => ({ init: m.initRV })),
   'account-master':   () => import('./views/account-master'),
   'account-type':     () => import('./views/account-type'),
   'party-master':     () => import('./views/party-master'),
@@ -29,6 +31,15 @@ const VIEW_INIT: Record<string, () => Promise<{ init: (el: HTMLElement) => void 
   'profit-loss':      () => import('./views/reports/profit-loss'),
   'balance-sheet':    () => import('./views/reports/balance-sheet'),
   'aging':            () => import('./views/reports/aging'),
+  'item-master':      () => import('./views/item-master'),
+  'sale-bill-form':      () => import('./views/bill-form').then(m => ({ init: m.initSaleBill })),
+  'sale-bill-list':      () => import('./views/bill-list').then(m => ({ init: m.initSaleBillList })),
+  'purchase-bill-form':  () => import('./views/bill-form').then(m => ({ init: m.initPurchaseBill })),
+  'purchase-bill-list':  () => import('./views/bill-list').then(m => ({ init: m.initPurchaseBillList })),
+  'item-group':          () => import('./views/item-group'),
+  'stock-adjustment':    () => import('./views/stock-adjustment'),
+  'stock-balance':       () => import('./views/reports/stock-balance'),
+  'expiry-report':       () => import('./views/reports/expiry-report'),
 };
 
 // ── DOM refs ──────────────────────────────────────────────────────────────────
@@ -63,7 +74,7 @@ async function navigate(): Promise<void> {
   // Sidebar: init once per login
   if (!_sidebarReady) {
     _sidebarReady = true;
-    initSidebar(sidebarEl);
+    await initSidebar(sidebarEl);
   }
 
   // Load the view
@@ -77,7 +88,7 @@ async function navigate(): Promise<void> {
   contentEl.innerHTML = '';
   try {
     const mod = await loader();
-    mod.init(contentEl);
+    await mod.init(contentEl);
   } catch (err) {
     console.error('View load error:', err);
     contentEl.innerHTML = `<p style="padding:2rem;color:red">Failed to load view: ${viewKey}</p>`;

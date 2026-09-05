@@ -3,17 +3,21 @@
  * RPCs: list_parties, save_party, delete_party, next_party_code, lk_control_accounts
  *
  * Verified signatures:
- *   list_parties(p_party_type, p_tenant, p_caller, p_status, p_term)
+ *   list_parties(p_party_type, p_tenant, p_caller, p_status, p_term) -> incl. due_days
  *   save_party(p_tenant, p_caller, p_party_type, p_party_code, p_party_name,
  *              p_control_account_no, p_address, p_mobile, p_email,
- *              p_tax_number, p_tax_type, p_active, p_orig_code)
+ *              p_tax_number, p_tax_type, p_active, p_due_days, p_orig_code)
  *   delete_party(p_tenant, p_caller, p_party_type, p_party_code)
  *   next_party_code(p_tenant, p_caller, p_party_type)
  *   lk_control_accounts(p_tenant, p_caller, p_term)
+ *
+ * due_days: credit due-days for this party. When blank, Sales/Purchase bills
+ * fall back to the company-wide default (Company Settings > Credit Terms).
  */
 
 import { rpc } from '../lib/rpc';
 import { ctx, roleLevel, getSession } from '../lib/session';
+import { lookupData } from '../services/lookup';
 
 interface Party {
   party_code:         string;
@@ -26,6 +30,7 @@ interface Party {
   email?:             string;
   tax_number?:        string;
   tax_type?:          string;
+  due_days?:          number | null;
 }
 
 interface ControlAcct {
@@ -33,23 +38,19 @@ interface ControlAcct {
   label: string;
 }
 
-const PARTY_TYPES = [
-  { value: 'customer', label: 'Customer' },
-  { value: 'supplier', label: 'Supplier' },
-  { value: 'employee', label: 'Employee' },
-  { value: 'other',    label: 'Other' },
-];
+interface PartyTypeOpt { value: string; label: string; }
 
-const TYPE_COLOR: Record<string, string> = {
-  customer: '#0284C7',
-  supplier: '#7C3AED',
-  employee: '#059669',
-  other:    '#78716C',
-};
+// Party types are tenant-defined (see the `party_types` table — e.g. NDS uses
+// codes 'C'/'D', not generic labels), so they're fetched live via lk_party_types
+// rather than hardcoded. This also fixes an edit-mode bug: a hardcoded list of
+// guessed codes couldn't match a real party's actual party_type, leaving the
+// (disabled) Party Type dropdown looking blank/unpopulated when editing.
+const TYPE_PALETTE = ['#0284C7', '#7C3AED', '#059669', '#D97706', '#DB2777', '#78716C'];
 
 const TAX_TYPES = ['', 'PAN', 'VAT', 'TIN'];
 
-let _rows:       Party[]       = [];
+let _rows:       Party[]        = [];
+let _partyTypes: PartyTypeOpt[] = [];
 let _ctrlAccts:  ControlAcct[] = [];
 let _editCode:   string | null = null;
 let _canEdit     = false;
@@ -75,7 +76,6 @@ export async function init(el: HTMLElement): Promise<void> {
     <div class="toolbar" style="gap:8px;margin-bottom:12px;flex-wrap:wrap">
       <select id="pm-type-filter" class="at-select">
         <option value="">All Types</option>
-        ${PARTY_TYPES.map(t => `<option value="${t.value}">${t.label}</option>`).join('')}
       </select>
       <select id="pm-status-filter" class="at-select">
         <option value="active" selected>Active</option>
@@ -125,7 +125,6 @@ export async function init(el: HTMLElement): Promise<void> {
             <label>Party Type <span style="color:red">*</span></label>
             <select id="pm-type" required>
               <option value="">— select type —</option>
-              ${PARTY_TYPES.map(t => `<option value="${t.value}">${t.label}</option>`).join('')}
             </select>
           </div>
           <div class="field" style="margin-bottom:12px">
@@ -168,6 +167,10 @@ export async function init(el: HTMLElement): Promise<void> {
                 ${TAX_TYPES.map(t => `<option value="${t}">${t || '(none)'}</option>`).join('')}
               </select>
             </div>
+          </div>
+          <div class="field" style="margin-bottom:14px">
+            <label>Credit Due Days</label>
+            <input id="pm-due-days" type="number" min="0" step="1" placeholder="blank = use company default" />
           </div>
           <div style="margin-bottom:16px">
             <label style="display:flex;align-items:center;gap:8px;cursor:pointer">
@@ -224,16 +227,44 @@ export async function init(el: HTMLElement): Promise<void> {
 
 async function loadData(el: HTMLElement): Promise<void> {
   try {
-    const [rows, ctrlRaw] = await Promise.all([
+    const [rows, ctrlRaw, typesRes] = await Promise.all([
       rpc<Party[]>('list_parties', { ...ctx(), p_party_type: null, p_status: 'all', p_term: null }),
       rpc<{ value: string; label: string }[]>('lk_control_accounts', { ...ctx(), p_term: null }),
+      lookupData('party_types'),
     ]);
     _rows      = Array.isArray(rows)    ? rows    : [];
     _ctrlAccts = Array.isArray(ctrlRaw) ? ctrlRaw : [];
+    _partyTypes = typesRes.rows.map(r => ({ value: r.value, label: r.label }));
+    populateTypeSelects(el);
     renderTable(el);
     populateCtrlAccounts(el);
   } catch (err) {
     showMsg(el, `Load failed: ${err instanceof Error ? err.message : err}`, 'error');
+  }
+}
+
+function typeLabel(value: string): string {
+  return _partyTypes.find(t => t.value === value)?.label ?? value;
+}
+
+function typeColor(value: string): string {
+  const idx = _partyTypes.findIndex(t => t.value === value);
+  return TYPE_PALETTE[(idx < 0 ? 0 : idx) % TYPE_PALETTE.length]!;
+}
+
+function populateTypeSelects(el: HTMLElement): void {
+  const filterSel = el.querySelector<HTMLSelectElement>('#pm-type-filter');
+  const formSel    = el.querySelector<HTMLSelectElement>('#pm-type');
+  const optsHtml = _partyTypes.map(t => `<option value="${t.value}">${t.label}</option>`).join('');
+  if (filterSel) {
+    const cur = filterSel.value;
+    filterSel.innerHTML = `<option value="">All Types</option>` + optsHtml;
+    filterSel.value = cur;
+  }
+  if (formSel) {
+    const cur = formSel.value;
+    formSel.innerHTML = `<option value="">— select type —</option>` + optsHtml;
+    formSel.value = cur;
   }
 }
 
@@ -270,13 +301,11 @@ function renderTable(el: HTMLElement): void {
   }
 
   body.innerHTML = rows.map(p => {
-    const typeLabel = PARTY_TYPES.find(t => t.value === p.party_type)?.label ?? p.party_type;
-    const color     = TYPE_COLOR[p.party_type] ?? '#78716C';
     return `
     <tr style="${!p.active ? 'opacity:.55' : ''}">
       <td style="font-family:monospace;font-size:.88rem">${p.party_code}</td>
       <td>${p.party_name}</td>
-      <td><span style="font-size:.78rem;font-weight:600;color:${color}">${typeLabel}</span></td>
+      <td><span style="font-size:.78rem;font-weight:600;color:${typeColor(p.party_type)}">${typeLabel(p.party_type)}</span></td>
       <td style="font-size:.82rem;color:var(--muted)">${ctrlLabel(p.control_account_no)}</td>
       <td style="text-align:center">
         ${p.active
@@ -324,6 +353,7 @@ function openPanel(el: HTMLElement, code: string | null, ptype: string | null): 
   const emailIn   = el.querySelector<HTMLInputElement>('#pm-email')!;
   const taxNoIn   = el.querySelector<HTMLInputElement>('#pm-tax-no')!;
   const taxTypeSel= el.querySelector<HTMLSelectElement>('#pm-tax-type')!;
+  const dueDaysIn = el.querySelector<HTMLInputElement>('#pm-due-days')!;
   const activeChk = el.querySelector<HTMLInputElement>('#pm-active')!;
   const errEl     = el.querySelector<HTMLElement>('#pm-form-err')!;
 
@@ -349,6 +379,7 @@ function openPanel(el: HTMLElement, code: string | null, ptype: string | null): 
     emailIn.value            = party.email ?? '';
     taxNoIn.value            = party.tax_number ?? '';
     taxTypeSel.value         = party.tax_type ?? '';
+    dueDaysIn.value          = party.due_days != null ? String(party.due_days) : '';
     activeChk.checked        = party.active;
   } else {
     titleEl.textContent      = 'New Party';
@@ -365,6 +396,7 @@ function openPanel(el: HTMLElement, code: string | null, ptype: string | null): 
     emailIn.value            = '';
     taxNoIn.value            = '';
     taxTypeSel.value         = '';
+    dueDaysIn.value          = '';
     activeChk.checked        = true;
   }
 
@@ -392,6 +424,7 @@ async function handleSave(e: Event, el: HTMLElement): Promise<void> {
   const emailIn   = el.querySelector<HTMLInputElement>('#pm-email')!;
   const taxNoIn   = el.querySelector<HTMLInputElement>('#pm-tax-no')!;
   const taxTypeSel= el.querySelector<HTMLSelectElement>('#pm-tax-type')!;
+  const dueDaysIn = el.querySelector<HTMLInputElement>('#pm-due-days')!;
   const activeChk = el.querySelector<HTMLInputElement>('#pm-active')!;
   const errEl     = el.querySelector<HTMLElement>('#pm-form-err')!;
   const saveBtn   = el.querySelector<HTMLButtonElement>('#pm-save')!;
@@ -413,6 +446,7 @@ async function handleSave(e: Event, el: HTMLElement): Promise<void> {
       p_tax_number:       taxNoIn.value.trim()  || null,
       p_tax_type:         taxTypeSel.value      || null,
       p_active:           activeChk.checked,
+      p_due_days:         dueDaysIn.value.trim() ? Number(dueDaysIn.value) : null,
       p_orig_code:        _editCode ?? codeIn.value.trim(),
     });
     closePanel(el);

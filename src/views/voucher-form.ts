@@ -20,6 +20,7 @@ import {
   isoToBs, bsToIso,
   daysInBsMonth, bsMonthStartDow, MONTH_NAMES,
 } from '../lib/bs-calendar';
+import { todayIso, toBS, fmt, escHtml, escAttr } from '../lib/ui-helpers';
 
 // ── Types ──────────────────────────────────────────────────────────────────────
 
@@ -48,17 +49,6 @@ function makeLine(): LineState {
     requires_party: false, party_type: '', party_code: '', party_name: '',
     description: '', debit: 0, credit: 0, cost_centre_code: '',
   };
-}
-
-function todayIso(): string { return new Date().toISOString().slice(0, 10); }
-
-function toBS(iso: string): string {
-  const bs = isoToBs(iso);
-  return bs ? bs.replace(/\//g, '-') : '';
-}
-
-function fmt(n: number): string {
-  return n.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 }
 
 // ── Label style shared by header ───────────────────────────────────────────────
@@ -857,10 +847,3 @@ function hideAlert(el: HTMLElement): void {
   if (a) a.hidden = true;
 }
 
-function escHtml(s: string): string {
-  return s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
-}
-
-function escAttr(s: string): string {
-  return s.replace(/"/g, '&quot;').replace(/'/g, '&#39;');
-}

@@ -50,6 +50,7 @@ export interface Party {
   phone?:             string;
   email?:             string;
   pan_no?:            string;
+  due_days?:          number | null;
 }
 
 export interface CostCentre {
@@ -95,4 +96,9 @@ export interface CompanyConfig {
   age_b3?:           number;
   age_b4?:           number;
   lock_date?:        string;
+  vat_pct?:                    number;
+  vat_payable_account_no?:     string;
+  vat_receivable_account_no?:  string;
+  default_sales_due_days?:     number;
+  default_purchase_due_days?:  number;
 }
