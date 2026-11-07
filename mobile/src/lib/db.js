@@ -17,6 +17,11 @@ db.version(1).stores({
   photos:        'photo_id, entry_id'             // photo blobs waiting to upload
 });
 
+// v2 (Phase 3): photos can be found by status
+db.version(2).stores({
+  photos: 'photo_id, entry_id, status'
+});
+
 export async function getMeta(key) {
   const row = await db.meta.get(key);
   return row ? row.value : null;
@@ -44,9 +49,16 @@ export async function saveMasters(m) {
   });
 }
 
-// Price for an item at a quantity: picks the right quantity level
-export async function priceFor(itemCode, qty) {
+// Price incl. VAT for an item at a quantity: picks the quantity level.
+// VIP discount applies to level 1 only (same rule as the server's mob._list_price).
+export async function priceFor(itemCode, qty, vip = false) {
   const levels = await db.prices.where('item_code').equals(itemCode).sortBy('level_no');
   const hit = levels.find(l => qty >= l.qty_from && (l.qty_to == null || qty <= l.qty_to));
-  return hit ? Number(hit.price_incl_vat) : 0;
+  if (!hit) return 0;
+  let price = Number(hit.price_incl_vat);
+  if (vip && hit.level_no === 1) {
+    const item = await db.items.get(itemCode);
+    price = Math.round(price * (1 - Number(item?.vip_disc_pct ?? 0) / 100) * 100) / 100;
+  }
+  return price;
 }

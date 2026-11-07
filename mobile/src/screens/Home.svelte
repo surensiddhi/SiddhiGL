@@ -4,6 +4,7 @@
   import { db, getMeta, setMeta } from '../lib/db.js';
   import { syncMasters } from '../lib/sync.js';
   import { isPhoneBlocked } from '../lib/api.js';
+  import { sendPending, waitingCount } from '../lib/entries.js';
   import { session } from '../stores/session.svelte.js';
   import Icon from '../components/Icon.svelte';
 
@@ -14,6 +15,7 @@
   let lang = $state('en');
   let syncing = $state(false);
   let message = $state('');
+  let waiting = $state(0);
 
   const label = (t) => (lang === 'np' && t.label_np) ? t.label_np : t.label_en;
 
@@ -28,6 +30,7 @@
     tiles = (await db.menu.toArray()).sort((a, b) => a.sort - b.sort);
     lastSync = await getMeta('last_sync');
     lang = (await getMeta('lang')) ?? 'en';
+    waiting = await waitingCount();
   }
 
   async function sync() {
@@ -38,12 +41,13 @@
     syncing = true;
     message = '';
     try {
+      await sendPending();
       await syncMasters();
       await load();
     } catch (e) {
       if (isPhoneBlocked(e)) return onBlocked(e.message);
       if (e.code === 'EXPIRED') return onLock();
-      message = e.message;
+      message = e.code === 'OFFLINE' ? 'No internet. Entries are saved and will be sent later.' : e.message;
     } finally {
       syncing = false;
     }
@@ -78,6 +82,7 @@
   <button class="syncbar" class:offline={session.offline} type="button" onclick={sync} disabled={syncing}>
     <span class:spin={syncing}><Icon name="sync" size={18} /></span>
     <span>{syncing ? 'Updating...' : session.offline ? 'Offline' : syncText}</span>
+    {#if waiting}<span class="pending-badge">{waiting} to send</span>{/if}
   </button>
 
   {#if message}<p class="msg warn">{message}</p>{/if}

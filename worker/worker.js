@@ -86,6 +86,8 @@ Object.assign(RULES, {
   mob_pin_login:       'public',
   mob_set_pin:         'public',
   mob_sync_masters:    'ctx',
+  mob_submit_entry:    'ctx',
+  mob_my_entries:      'ctx',
   mob_list_devices:    'ctx',
   mob_revoke_device:   'ctx',
   mob_reset_pin:       'ctx',
@@ -107,6 +109,9 @@ export default {
     }
 
     const url   = new URL(request.url);
+    if (url.pathname === '/upload/mob_photo') {
+      return uploadMobPhoto(request, env, origin, url);
+    }
     const match = url.pathname.match(/^\/rpc\/([A-Za-z0-9_]+)$/);
     if (!match) {
       return json({ error: 'Not found' }, 404, origin);
@@ -177,6 +182,82 @@ export default {
     });
   }
 };
+
+// ── SiddhiGL Mobile photo upload ────────────────────────────────────────────
+// POST /upload/mob_photo?entry_id=..&photo_id=..&device_id=..   body = JPEG
+// Needs the session token. The Worker builds the storage path from the token's
+// tenant (<tenant>/<entry_id>/<photo_id>.jpg), uploads it to the private bucket
+// "mob-photos", then records it with mob.add_photo (which checks the entry
+// belongs to this user). The phone never sees the storage key.
+const UUID_RE         = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+const MAX_PHOTO_BYTES = 2 * 1024 * 1024;
+
+async function uploadMobPhoto(request, env, origin, url) {
+  if (!env.SUPABASE_URL || !env.SUPABASE_KEY || !env.SESSION_SECRET) {
+    return json({ error: 'Server not configured' }, 500, origin);
+  }
+
+  const auth = request.headers.get('Authorization') || '';
+  const who  = auth.startsWith('Bearer ') ? await verifyToken(auth.slice(7), env.SESSION_SECRET) : null;
+  if (!who) return json({ error: 'Session expired. Please sign in again.' }, 401, origin);
+
+  const entryId  = (url.searchParams.get('entry_id')  || '').toLowerCase();
+  const photoId  = (url.searchParams.get('photo_id')  || '').toLowerCase();
+  const deviceId = (url.searchParams.get('device_id') || '').toLowerCase();
+  if (![entryId, photoId, deviceId].every(v => UUID_RE.test(v))) {
+    return json({ message: 'Photo request is not valid' }, 400, origin);
+  }
+
+  const type = (request.headers.get('Content-Type') || '').split(';')[0].trim();
+  if (type !== 'image/jpeg') return json({ message: 'Photo must be a JPEG image' }, 400, origin);
+
+  const body = await request.arrayBuffer();
+  if (!body.byteLength || body.byteLength > MAX_PHOTO_BYTES) {
+    return json({ message: 'Photo is too large (2 MB at most)' }, 413, origin);
+  }
+
+  const base = env.SUPABASE_URL.replace(/\/+$/, '');
+  const key  = { 'apikey': env.SUPABASE_KEY, 'Authorization': 'Bearer ' + env.SUPABASE_KEY };
+  const path = `${who.t}/${entryId}/${photoId}.jpg`;
+
+  // 1. Store the file
+  let up;
+  try {
+    up = await fetch(`${base}/storage/v1/object/mob-photos/${path}`, {
+      method: 'POST', headers: { ...key, 'Content-Type': 'image/jpeg' }, body
+    });
+  } catch {
+    return json({ error: 'Upstream fetch failed' }, 502, origin);
+  }
+  if (!up.ok) {
+    const text = await up.text();
+    const already = /duplicate|already exists/i.test(text);       // same photo sent again
+    if (!already) {
+      return json({ message: 'Photo could not be stored: ' + text.slice(0, 200) },
+                  up.status >= 500 ? 502 : 400, origin);
+    }
+  }
+
+  // 2. Record it against the entry
+  let rec;
+  try {
+    rec = await fetch(`${base}/rest/v1/rpc/add_photo`, {
+      method: 'POST',
+      headers: { ...key, 'Content-Type': 'application/json', 'Content-Profile': 'mob' },
+      body: JSON.stringify({
+        p_tenant: who.t, p_caller: who.u, p_device_id: deviceId,
+        p_entry_id: entryId, p_photo_id: photoId, p_path: path,
+        p_size_kb: Math.ceil(body.byteLength / 1024)
+      })
+    });
+  } catch {
+    return json({ error: 'Upstream fetch failed' }, 502, origin);
+  }
+  return new Response(await rec.text(), {
+    status: rec.status,
+    headers: { 'Content-Type': 'application/json', ...cors(origin) }
+  });
+}
 
 /** Overwrite tenant + user in the params with the values from the token. */
 function stamp(rule, params, who) {

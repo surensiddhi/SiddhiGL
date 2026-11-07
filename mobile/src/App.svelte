@@ -9,8 +9,18 @@
   import PinLogin from './screens/PinLogin.svelte';
   import Home from './screens/Home.svelte';
   import Coming from './screens/Coming.svelte';
+  import Sale from './screens/Sale.svelte';
+  import Expense from './screens/Expense.svelte';
+  import Saved from './screens/Saved.svelte';
+  import MyEntries from './screens/MyEntries.svelte';
+  import Money from './screens/Money.svelte';
+  import PhotoBill from './screens/PhotoBill.svelte';
+  import { sendPending } from './lib/entries.js';
 
-  let screen = $state('loading');   // loading | register | setpin | pin | home | coming
+  // loading | register | setpin | pin | home | coming | sale | expense | saved | entries
+  let screen = $state('loading');
+  let saved = $state(null);         // the entry just saved
+  let formKey = $state(0);          // bump to start a fresh form
   let hasPin = $state(false);
   let notice = $state('');
   let tile = $state(null);
@@ -37,8 +47,11 @@
     addEventListener('keydown', touch);
     document.addEventListener('visibilitychange', onVisible);
     const timer = setInterval(checkIdle, 30000);
+    const onOnline = () => sendPending();     // internet back: send what is waiting
+    addEventListener('online', onOnline);
 
     return () => {
+      removeEventListener('online', onOnline);
       removeEventListener('pointerdown', touch);
       removeEventListener('keydown', touch);
       document.removeEventListener('visibilitychange', onVisible);
@@ -69,10 +82,29 @@
     screen = 'register';
   }
 
+  // Tile action (from mob.menu) -> screen
+  const SCREENS = {
+    SALE: 'sale', EXPENSE: 'expense', RECEIPT: 'receipt', PAYMENT: 'payment',
+    PHOTO: 'photo', MY_ENTRIES: 'entries'
+  };
+
   function open(t, title) {
     tile = { ...t, title };
-    screen = 'coming';
+    formKey++;
+    screen = SCREENS[t.action] ?? 'coming';
   }
+
+  function afterSave(entry) {
+    saved = entry;
+    screen = 'saved';
+  }
+
+  function again() {
+    formKey++;
+    screen = SCREENS[saved.entry_type] ?? 'home';
+  }
+
+  const home = () => (screen = 'home');
 </script>
 
 {#if screen === 'register'}
@@ -83,6 +115,20 @@
   <PinLogin onUnlocked={unlocked} onForgot={() => (screen = 'register')} onBlocked={blocked} />
 {:else if screen === 'home'}
   <Home onOpen={open} onLock={doLock} onBlocked={blocked} />
+{:else if screen === 'sale'}
+  {#key formKey}<Sale onBack={home} onSaved={afterSave} />{/key}
+{:else if screen === 'expense'}
+  {#key formKey}<Expense onBack={home} onSaved={afterSave} />{/key}
+{:else if screen === 'receipt'}
+  {#key formKey}<Money type="RECEIPT" onBack={home} onSaved={afterSave} />{/key}
+{:else if screen === 'payment'}
+  {#key formKey}<Money type="PAYMENT" onBack={home} onSaved={afterSave} />{/key}
+{:else if screen === 'photo'}
+  {#key formKey}<PhotoBill onBack={home} onSaved={afterSave} />{/key}
+{:else if screen === 'saved'}
+  <Saved entry={saved} onAgain={again} onHome={home} />
+{:else if screen === 'entries'}
+  <MyEntries onBack={home} />
 {:else if screen === 'coming'}
-  <Coming title={tile.title} icon={tile.icon} onBack={() => (screen = 'home')} />
+  <Coming title={tile.title} icon={tile.icon} onBack={home} />
 {/if}

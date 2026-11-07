@@ -13,20 +13,25 @@ export class ApiError extends Error {
   }
 }
 
-export async function call(fn, params = {}) {
+export function call(fn, params = {}) {
+  return send(`/rpc/${fn}`, 'application/json', JSON.stringify(params), fn);
+}
+
+// Send one photo (JPEG blob) for an entry that is already on the server
+export function uploadPhoto(query, blob) {
+  return send(`/upload/mob_photo?${new URLSearchParams(query)}`, 'image/jpeg', blob, 'photo upload');
+}
+
+async function send(path, contentType, body, fn) {
   if (!WORKER) throw new ApiError('VITE_WORKER_URL is not set in .env.local');
   if (!navigator.onLine) throw new ApiError('No internet connection.', 0, 'OFFLINE');
 
-  const headers = { 'Content-Type': 'application/json' };
+  const headers = { 'Content-Type': contentType };
   if (session.token) headers.Authorization = 'Bearer ' + session.token;
 
   let res;
   try {
-    res = await fetch(`${WORKER}/rpc/${fn}`, {
-      method: 'POST',
-      headers,
-      body: JSON.stringify(params)
-    });
+    res = await fetch(WORKER + path, { method: 'POST', headers, body });
   } catch {
     throw new ApiError('Cannot reach the server. Check your internet.', 0, 'OFFLINE');
   }
@@ -39,7 +44,7 @@ export async function call(fn, params = {}) {
     session.token = null;
     throw new ApiError('Session expired. Enter your PIN again.', 401, 'EXPIRED');
   }
-  if (res.status === 403 && data?.code === 'FN_NOT_ALLOWED') {
+  if ((res.status === 403 && data?.code === 'FN_NOT_ALLOWED') || (res.status === 404 && fn === 'photo upload')) {
     throw new ApiError(`The server is not updated yet (${fn}). Redeploy the Worker.`, 403, 'FN_NOT_ALLOWED');
   }
   if (!res.ok) {
