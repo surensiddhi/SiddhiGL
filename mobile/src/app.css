@@ -1,0 +1,118 @@
+/* SiddhiGL Mobile — base styles (mobile first, big touch targets) */
+:root {
+  --brand: #1f6f5c;
+  --brand-tint: #e4f1ec;
+  --ink: #1b2421;
+  --ink-2: #5d6b66;
+  --line: #d9e1de;
+  --bg: #f4f7f6;
+  --card: #ffffff;
+  --error: #b42318;
+  --error-bg: #fdecea;
+  --warn: #8a5a00;
+  --warn-bg: #fff4dc;
+  font-family: system-ui, -apple-system, "Segoe UI", Roboto, "Noto Sans Devanagari", sans-serif;
+  color: var(--ink);
+  background: var(--bg);
+  -webkit-text-size-adjust: 100%;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --brand: #4fb89a;
+    --brand-tint: #17332b;
+    --ink: #e8efec;
+    --ink-2: #9aa8a3;
+    --line: #2c3633;
+    --bg: #111715;
+    --card: #1a2220;
+    --error: #ff8a80;
+    --error-bg: #3a1714;
+    --warn: #f3c56b;
+    --warn-bg: #33270e;
+  }
+}
+
+* { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+html, body { margin: 0; min-height: 100%; background: var(--bg); }
+button, input { font: inherit; color: inherit; }
+button { cursor: pointer; }
+button:disabled { opacity: 0.5; cursor: default; }
+
+.screen {
+  min-height: 100dvh;
+  padding: max(16px, env(safe-area-inset-top)) 16px max(24px, env(safe-area-inset-bottom));
+  max-width: 560px;
+  margin: 0 auto;
+}
+.screen.narrow { max-width: 420px; }
+.screen.center { text-align: center; display: flex; flex-direction: column; justify-content: center; }
+
+h1 { font-size: 24px; margin: 8px 0 4px; }
+h2 { font-size: 20px; margin: 0; }
+.muted { color: var(--ink-2); }
+.small { font-size: 13px; }
+.prompt { font-size: 17px; margin: 24px 0 4px; }
+
+.brand-head { text-align: center; margin: 24px 0 20px; }
+.logo {
+  width: 56px; height: 56px; border-radius: 16px; margin: 0 auto;
+  background: var(--brand); color: #fff; font-size: 28px; font-weight: 700;
+  display: flex; align-items: center; justify-content: center;
+}
+
+form { display: flex; flex-direction: column; gap: 14px; }
+label { display: flex; flex-direction: column; gap: 6px; font-weight: 600; font-size: 15px; }
+label small { font-weight: 400; }
+input {
+  height: 52px; padding: 0 14px; border-radius: 12px;
+  border: 1px solid var(--line); background: var(--card); font-size: 17px;
+}
+input:focus { outline: 2px solid var(--brand); outline-offset: 1px; border-color: transparent; }
+
+.primary {
+  height: 56px; border: 0; border-radius: 14px; margin-top: 8px;
+  background: var(--brand); color: #fff; font-size: 18px; font-weight: 600;
+}
+.link {
+  background: none; border: 0; color: var(--brand); font-weight: 600;
+  padding: 16px; margin-top: 8px;
+}
+
+.msg { padding: 12px 14px; border-radius: 12px; font-size: 15px; text-align: left; margin: 12px 0; }
+.msg.error { background: var(--error-bg); color: var(--error); }
+.msg.warn { background: var(--warn-bg); color: var(--warn); }
+
+.topbar { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: 12px; }
+.company { font-weight: 700; font-size: 17px; }
+.top-actions { display: flex; align-items: center; gap: 8px; }
+.icon-btn {
+  width: 44px; height: 44px; border-radius: 12px; border: 1px solid var(--line);
+  background: var(--card); display: flex; align-items: center; justify-content: center;
+}
+.chip {
+  height: 36px; padding: 0 12px; border-radius: 18px;
+  border: 1px solid var(--line); background: var(--card); font-size: 14px;
+}
+
+.syncbar {
+  width: 100%; display: flex; align-items: center; gap: 8px;
+  padding: 10px 14px; border-radius: 12px; border: 0;
+  background: var(--brand-tint); color: var(--brand); font-size: 14px; font-weight: 600;
+}
+.syncbar.offline { background: var(--warn-bg); color: var(--warn); }
+.spin { display: inline-flex; animation: spin 1s linear infinite; }
+@keyframes spin { to { transform: rotate(360deg); } }
+
+.tiles { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; margin-top: 16px; }
+.tile {
+  aspect-ratio: 1; border-radius: 18px; border: 1px solid var(--line);
+  background: var(--card); color: var(--brand);
+  display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 10px;
+  padding: 8px;
+}
+.tile span { color: var(--ink); font-size: 14px; font-weight: 600; line-height: 1.2; }
+.tile:active { background: var(--brand-tint); }
+
+.empty { text-align: center; color: var(--ink-2); margin: 32px 0; }
+.empty.big { margin-top: 30vh; display: flex; flex-direction: column; align-items: center; gap: 12px; }
