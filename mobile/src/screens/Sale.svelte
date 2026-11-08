@@ -8,6 +8,8 @@
   import Icon from '../components/Icon.svelte';
   import Picker from '../components/Picker.svelte';
   import ModeChips from '../components/ModeChips.svelte';
+  import DigitalPay from '../components/DigitalPay.svelte';
+  import PhotoField from '../components/PhotoField.svelte';
 
   let { onBack, onSaved } = $props();
 
@@ -19,6 +21,8 @@
 
   let party = $state(null);          // { party_code, party_name, is_vip }
   let mode = $state('CASH');
+  let payRef = $state('');           // Digital: reference from the customer's app
+  let photos = $state([]);           // Digital: optional photo of the customer's success screen
   let lines = $state([]);            // { item_code, item_name, unit, qty, list, price, edited }
   let picking = $state(null);        // 'party' | 'item' | null
   let editing = $state(null);        // index of the line whose price is open
@@ -109,12 +113,13 @@
         party_name: party?.party_name ?? 'Cash Customer',
         title: party?.party_name ?? 'Cash Customer',
         payment_mode: mode,
+        pay_ref: mode === 'DIGITAL' ? payRef.trim() || null : null,
         total,
         lines: lines.map(l => ({
           item_code: l.item_code, item_name: l.item_name, qty: l.qty,
           price_incl_vat: l.price, list_price_incl_vat: l.list, price_edited: l.edited
         }))
-      });
+      }, mode === 'DIGITAL' ? photos : []);
       onSaved(entry);
     } catch (e) {
       error = e.message;
@@ -137,6 +142,10 @@
   </button>
 
   <ModeChips bind:value={mode} modes={['CASH', 'BANK', 'DIGITAL', 'CREDIT']} onChange={modeChanged} />
+  {#if mode === 'DIGITAL'}
+    <DigitalPay amount={total} bind:payRef />
+    <div class="proof"><PhotoField bind:photos max={2} label="Payment screen photo (optional)" /></div>
+  {/if}
 
   <section class="lines">
     {#each lines as l, i (l.item_code)}
@@ -200,6 +209,7 @@
   }
   .pname { font-size: 17px; font-weight: 700; display: flex; align-items: center; gap: 8px; }
   .vip { font-size: 11px; font-weight: 700; color: var(--brand); background: var(--brand-tint); border-radius: 8px; padding: 2px 6px; }
+  .proof { margin-top: 10px; }
   .lines { margin-top: 16px; display: flex; flex-direction: column; gap: 10px; }
   .line { background: var(--card); border: 1px solid var(--line); border-radius: 14px; padding: 10px 12px; }
   .lname { display: flex; justify-content: space-between; align-items: flex-start; gap: 8px; }

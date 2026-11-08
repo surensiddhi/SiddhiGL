@@ -4,7 +4,7 @@
   import { myEntries, retryEntry, deleteEntry, sendPending, money } from '../lib/entries.js';
   import Icon from '../components/Icon.svelte';
 
-  let { onBack } = $props();
+  let { onBack, onOpen } = $props();
   let list = $state([]);
   let loading = $state(true);
 
@@ -55,14 +55,16 @@
     {#each list as e (e.entry_id)}
       {@const b = badge(e)}
       <li>
-        <div class="row">
-          <strong>{title(e)}</strong>
-          <span class="amt">{e.total ? 'Rs ' + money(e.total) : ''}</span>
-        </div>
-        <div class="row small">
-          <span class="muted">{when(e)}{e.temp_no ? ' · ' + e.temp_no : ''}</span>
-          <span class="badge {b.cls}">{b.text}</span>
-        </div>
+        <button class="open" type="button" onclick={() => onOpen(e)}>
+          <div class="row">
+            <strong>{title(e)}</strong>
+            <span class="amt">{e.total ? 'Rs ' + money(e.total) : ''}</span>
+          </div>
+          <div class="row small">
+            <span class="muted">{when(e)}{e.temp_no ? ' · ' + e.temp_no : ''}</span>
+            <span class="badge {b.cls}">{b.text}</span>
+          </div>
+        </button>
         {#if e.price_flag}<p class="note warn">Price change needs approval</p>{/if}
         {#if e.photos_waiting}<p class="note warn">{e.photos_waiting} photo{e.photos_waiting === 1 ? '' : 's'} waiting to send</p>{/if}
         {#each e.photos_failed ?? [] as p (p.photo_id)}
@@ -89,6 +91,7 @@
 <style>
   ul { list-style: none; padding: 0; margin: 0; display: flex; flex-direction: column; gap: 10px; }
   li { background: var(--card); border: 1px solid var(--line); border-radius: 14px; padding: 12px 14px; }
+  .open { display: block; width: 100%; padding: 0; border: 0; background: none; text-align: left; }
   .row { display: flex; justify-content: space-between; align-items: center; gap: 8px; }
   .row.small { margin-top: 6px; font-size: 13px; }
   .amt { font-weight: 700; white-space: nowrap; }

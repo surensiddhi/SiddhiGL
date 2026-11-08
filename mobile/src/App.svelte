@@ -15,15 +15,17 @@
   import MyEntries from './screens/MyEntries.svelte';
   import Money from './screens/Money.svelte';
   import PhotoBill from './screens/PhotoBill.svelte';
+  import EntryDetail from './screens/EntryDetail.svelte';
   import { sendPending } from './lib/entries.js';
 
-  // loading | register | setpin | pin | home | coming | sale | expense | saved | entries
+  // loading | register | setpin | pin | home | coming | sale | expense | saved | entries | detail
   let screen = $state('loading');
   let saved = $state(null);         // the entry just saved
   let formKey = $state(0);          // bump to start a fresh form
   let hasPin = $state(false);
   let notice = $state('');
   let tile = $state(null);
+  let detail = $state(null);        // { entry, back } for the detail screen
 
   // Auto-lock after idle minutes (mob.settings: idle_lock_minutes)
   let lastActive = Date.now();
@@ -105,6 +107,12 @@
   }
 
   const home = () => (screen = 'home');
+
+  // Detail opens from My Entries or Saved; Back returns there
+  function view(entry, back) {
+    detail = { entry, back };
+    screen = 'detail';
+  }
 </script>
 
 {#if screen === 'register'}
@@ -126,9 +134,11 @@
 {:else if screen === 'photo'}
   {#key formKey}<PhotoBill onBack={home} onSaved={afterSave} />{/key}
 {:else if screen === 'saved'}
-  <Saved entry={saved} onAgain={again} onHome={home} />
+  <Saved entry={saved} onAgain={again} onHome={home} onView={(e) => view(e, 'saved')} />
 {:else if screen === 'entries'}
-  <MyEntries onBack={home} />
+  <MyEntries onBack={home} onOpen={(e) => view(e, 'entries')} />
+{:else if screen === 'detail'}
+  <EntryDetail entry={detail.entry} onBack={() => (screen = detail.back)} />
 {:else if screen === 'coming'}
   <Coming title={tile.title} icon={tile.icon} onBack={home} />
 {/if}

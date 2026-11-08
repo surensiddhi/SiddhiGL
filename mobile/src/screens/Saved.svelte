@@ -4,7 +4,7 @@
   import { db } from '../lib/db.js';
   import { sendPending, money } from '../lib/entries.js';
 
-  let { entry, onAgain, onHome } = $props();
+  let { entry, onAgain, onHome, onView } = $props();
   let status = $state(entry.status);
   let photosLeft = $state(entry.photo_count ?? 0);
 
@@ -37,6 +37,7 @@
     <p class="msg warn">Saved on this phone. It will be sent when you are online.</p>
   {/if}
 
+  <button class="share" type="button" onclick={() => onView(entry)}>{entry.entry_type === 'SALE' ? 'View / Share bill' : 'View / Share'}</button>
   <button class="primary" type="button" onclick={onAgain}>{AGAIN[entry.entry_type] ?? 'New'}</button>
   <button class="link" type="button" onclick={onHome}>Home</button>
 </main>
@@ -46,6 +47,10 @@
     width: 80px; height: 80px; border-radius: 50%; margin: 0 auto 8px;
     background: var(--brand-tint); color: var(--brand);
     display: flex; align-items: center; justify-content: center;
+  }
+  .share {
+    height: 52px; border-radius: 14px; border: 1px solid var(--brand); background: var(--card);
+    color: var(--brand); font-weight: 700; font-size: 16px; margin-top: 8px;
   }
   .big { font-size: 30px; font-weight: 800; margin: 4px 0; }
 </style>

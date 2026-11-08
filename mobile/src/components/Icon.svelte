@@ -14,6 +14,7 @@
     lock:   'M6 11h12v10H6zM8.5 11V7.5a3.5 3.5 0 0 1 7 0V11',
     sync:   'M20 11a8 8 0 0 0-14.3-4.9L4 8M4 4v4h4M4 13a8 8 0 0 0 14.3 4.9L20 16M20 20v-4h-4',
     back:   'M15 18l-6-6 6-6',
+    qr:     'M4 4h6v6H4zM14 4h6v6h-6zM4 14h6v6H4zM14 14h2v2h-2zM18 14h2v2h-2zM14 18h2v2h-2zM18 18h2v2h-2zM6.5 6.5h1v1h-1zM16.5 6.5h1v1h-1zM6.5 16.5h1v1h-1z',
     dot:    'M12 12h.01'
   };
 </script>

@@ -94,7 +94,7 @@ async function doSend() {
     // Only the fields the server reads
     const payload = {
       entry_id: e.entry_id, entry_type: e.entry_type, entry_date: e.entry_date,
-      party_code: e.party_code, payment_mode: e.payment_mode, note: e.note,
+      party_code: e.party_code, payment_mode: e.payment_mode, note: e.note, pay_ref: e.pay_ref,
       temp_no: e.temp_no, created_at: e.created_at, app_version: e.app_version,
       amount: e.amount,                          // Receipt / Payment / Photo Bill
       lines: (e.lines ?? []).map(l => ({

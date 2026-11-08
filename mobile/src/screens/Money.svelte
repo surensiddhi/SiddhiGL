@@ -8,6 +8,7 @@
   import Picker from '../components/Picker.svelte';
   import ModeChips from '../components/ModeChips.svelte';
   import PhotoField from '../components/PhotoField.svelte';
+  import DigitalPay from '../components/DigitalPay.svelte';
 
   let { type, onBack, onSaved } = $props();   // type: 'RECEIPT' | 'PAYMENT'
 
@@ -20,6 +21,7 @@
   let amount = $state('');
   let mode = $state('CASH');
   let note = $state('');
+  let payRef = $state('');
   let photos = $state([]);
   let busy = $state(false);
   let error = $state('');
@@ -51,6 +53,7 @@
         party_name: party.party_name,
         title: (isReceipt ? 'From ' : 'To ') + party.party_name,
         payment_mode: mode,
+        pay_ref: mode === 'DIGITAL' ? payRef.trim() || null : null,
         amount: value,
         total: value,
         note: note.trim() || null
@@ -82,6 +85,7 @@
   </label>
 
   <div class="block"><ModeChips bind:value={mode} /></div>
+  {#if isReceipt && mode === 'DIGITAL'}<DigitalPay amount={value} bind:payRef />{/if}
 
   <label class="block">
     Note (optional)
